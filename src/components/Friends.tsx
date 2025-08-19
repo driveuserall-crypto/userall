@@ -27,6 +27,10 @@ const Friends: React.FC = () => {
     e.preventDefault();
     if (!friendEmail.trim()) return;
 
+    if (friendEmail.trim() === user?.email) {
+      setAddFriendError('You cannot send a friend request to yourself');
+      return;
+    }
     setIsAddingFriend(true);
     setAddFriendError('');
 

@@ -12,6 +12,93 @@ const Timer: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [workTime, setWorkTime] = useState(timerSettings.workTime);
   const [breakTime, setBreakTime] = useState(timerSettings.breakTime);
+  const [hasNotificationPermission, setHasNotificationPermission] = useState(false);
+
+  // Request notification permission on component mount
+  useEffect(() => {
+    const requestNotificationPermission = async () => {
+      if ('Notification' in window) {
+        if (Notification.permission === 'default') {
+          const permission = await Notification.requestPermission();
+          setHasNotificationPermission(permission === 'granted');
+        } else {
+          setHasNotificationPermission(Notification.permission === 'granted');
+        }
+      }
+    };
+    
+    requestNotificationPermission();
+  }, []);
+
+  // Load timer state from localStorage
+  useEffect(() => {
+    const savedState = localStorage.getItem('timerState');
+    if (savedState) {
+      const { isRunning: savedIsRunning, timeLeft: savedTimeLeft, isBreak: savedIsBreak, lastUpdate } = JSON.parse(savedState);
+      const now = Date.now();
+      const elapsed = Math.floor((now - lastUpdate) / 1000);
+      
+      if (savedIsRunning && savedTimeLeft > elapsed) {
+        setIsRunning(true);
+        setTimeLeft(savedTimeLeft - elapsed);
+        setIsBreak(savedIsBreak);
+      } else if (savedIsRunning && savedTimeLeft <= elapsed) {
+        // Timer finished while away
+        setIsRunning(false);
+        setIsBreak(!savedIsBreak);
+        setTimeLeft(savedIsBreak ? timerSettings.workTime * 60 : timerSettings.breakTime * 60);
+        playNotificationSound();
+        showNotification(!savedIsBreak ? 'Break Time!' : 'Work Time!', !savedIsBreak ? 'Time for a break!' : 'Back to work!');
+      } else {
+        setTimeLeft(savedTimeLeft);
+        setIsBreak(savedIsBreak);
+      }
+    }
+  }, [timerSettings]);
+
+  // Save timer state to localStorage
+  useEffect(() => {
+    const timerState = {
+      isRunning,
+      timeLeft,
+      isBreak,
+      lastUpdate: Date.now()
+    };
+    localStorage.setItem('timerState', JSON.stringify(timerState));
+  }, [isRunning, timeLeft, isBreak]);
+
+  const playNotificationSound = () => {
+    // Create a simple beep sound using Web Audio API
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 1);
+    } catch (error) {
+      console.log('Could not play notification sound:', error);
+    }
+  };
+
+  const showNotification = (title: string, body: string) => {
+    if (hasNotificationPermission && 'Notification' in window) {
+      new Notification(title, {
+        body,
+        icon: '/vite.svg',
+        badge: '/vite.svg'
+      });
+    }
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -22,12 +109,16 @@ const Timer: React.FC = () => {
       }, 1000);
     } else if (timeLeft === 0) {
       // Time's up - switch mode
+      playNotificationSound();
+      
       if (isBreak) {
         // Break is over, start work session
+        showNotification('Work Time!', 'Break is over. Time to get back to work!');
         setIsBreak(false);
         setTimeLeft(timerSettings.workTime * 60);
       } else {
         // Work session is over, start break
+        showNotification('Break Time!', 'Great work! Time for a well-deserved break.');
         setIsBreak(true);
         setTimeLeft(timerSettings.breakTime * 60);
       }
@@ -44,6 +135,7 @@ const Timer: React.FC = () => {
   const resetTimer = () => {
     setIsRunning(false);
     setTimeLeft(isBreak ? timerSettings.breakTime * 60 : timerSettings.workTime * 60);
+    localStorage.removeItem('timerState');
   };
 
   const formatTime = (seconds: number) => {
@@ -80,7 +172,9 @@ const Timer: React.FC = () => {
             <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
               {isBreak ? 'Break Time' : 'Focus Time'}
             </h3>
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Pomodoro Timer</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Pomodoro Timer {hasNotificationPermission ? '🔔' : '🔕'}
+            </p>
           </div>
         </div>
         
@@ -133,6 +227,23 @@ const Timer: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 w-96 max-w-[90vw]`}>
             <h3 className={`text-xl font-semibold mb-6 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>Timer Settings</h3>
+            
+            {!hasNotificationPermission && (
+              <div className={`mb-4 p-3 rounded-lg ${isDarkMode ? 'bg-yellow-900 bg-opacity-20 border-yellow-700 text-yellow-300' : 'bg-yellow-50 border-yellow-200 text-yellow-800'} border`}>
+                <p className="text-sm">
+                  🔔 Enable browser notifications to get alerts when timer finishes!
+                </p>
+                <button
+                  onClick={async () => {
+                    const permission = await Notification.requestPermission();
+                    setHasNotificationPermission(permission === 'granted');
+                  }}
+                  className="mt-2 px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm transition-colors duration-200"
+                >
+                  Enable Notifications
+                </button>
+              </div>
+            )}
             
             <div className="space-y-4 mb-6">
               <div>

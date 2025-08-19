@@ -137,6 +137,7 @@ const NoteForm: React.FC<NoteFormProps> = ({ note, onClose, onSave }) => {
               onChange={(e) => setContent(e.target.value)}
               rows={12}
               className={`w-full px-4 py-3 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' : 'bg-gray-50 border-gray-300 text-gray-800 placeholder-gray-500'} border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none`}
+              style={{ direction: 'ltr', unicodeBidi: 'normal' }}
               placeholder="Write your note content here..."
               required
             />

@@ -38,7 +38,7 @@ const GroupStudy: React.FC = () => {
           // Get user name from friends list or current user
           const userName = newMessage.user_id === user?.id 
             ? (user?.user_metadata?.name || user?.email || 'You')
-            : friends.find(f => f.friend_id === newMessage.user_id)?.friend_name || 'Unknown User';
+            : friends.find(f => f.friend_id === newMessage.user_id)?.friend_name || 'Friend';
           
           setMessages(prev => [...prev, { ...newMessage, user_name: userName }]);
         }
@@ -65,7 +65,7 @@ const GroupStudy: React.FC = () => {
         ...msg,
         user_name: msg.user_id === user?.id 
           ? (user?.user_metadata?.name || user?.email || 'You')
-          : friends.find(f => f.friend_id === msg.user_id)?.friend_name || 'Unknown User'
+          : friends.find(f => f.friend_id === msg.user_id)?.friend_name || 'Friend'
       }));
 
       setMessages(messagesWithNames);

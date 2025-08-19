@@ -300,14 +300,12 @@ const MobileAdminApp: React.FC = () => {
                       {complaint.status}
                     </span>
                     <span className="text-xs text-gray-500">{formatDate(complaint.created_at)}</span>
-                    {complaint.status === 'pending' && (
-                      <button
-                        onClick={() => setSelectedComplaint(complaint)}
-                        className="px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        Reply
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setSelectedComplaint(complaint)}
+                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      {complaint.status === 'pending' ? 'Reply' : 'View'}
+                    </button>
                   </div>
                 </div>
               </div>

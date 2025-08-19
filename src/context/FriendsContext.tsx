@@ -164,7 +164,18 @@ export const FriendsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const loadStudySessions = async () => {
     if (!user) return;
 
-    const friendIds = friends.map(f => f.friend_id);
+    // Get all friend IDs
+    const { data: friendsData, error: friendsError } = await supabase
+      .from('friends')
+      .select('friend_id')
+      .eq('user_id', user.id);
+
+    if (friendsError) {
+      console.error('Error loading friends for study sessions:', friendsError);
+      return;
+    }
+
+    const friendIds = friendsData?.map(f => f.friend_id) || [];
     const allUserIds = [user.id, ...friendIds];
 
     const { data: sessionsData, error } = await supabase
@@ -299,18 +310,53 @@ export const FriendsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) return false;
 
     try {
-      const { data, error } = await supabase.rpc('send_friend_request_safe', {
-        sender_user_id: user.id,
-        receiver_email: email.trim()
-      });
+      // First, find the user by email
+      const { data: receiverData, error: receiverError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email.trim())
+        .single();
 
-      if (error) throw error;
-      
-      if (!data?.success) {
-        throw new Error(data?.error || 'Failed to send friend request');
+      if (receiverError || !receiverData) {
+        throw new Error('User not found with this email address');
       }
-      
-      return data?.success || false;
+
+      // Check if already friends
+      const { data: existingFriend } = await supabase
+        .from('friends')
+        .select('id')
+        .or(`and(user_id.eq.${user.id},friend_id.eq.${receiverData.id}),and(user_id.eq.${receiverData.id},friend_id.eq.${user.id})`)
+        .single();
+
+      if (existingFriend) {
+        throw new Error('You are already friends with this user');
+      }
+
+      // Check if request already exists
+      const { data: existingRequest } = await supabase
+        .from('friend_requests')
+        .select('id')
+        .eq('sender_id', user.id)
+        .eq('receiver_id', receiverData.id)
+        .eq('status', 'pending')
+        .single();
+
+      if (existingRequest) {
+        throw new Error('Friend request already sent to this user');
+      }
+
+      // Send friend request
+      const { error: insertError } = await supabase
+        .from('friend_requests')
+        .insert({
+          sender_id: user.id,
+          receiver_id: receiverData.id,
+          status: 'pending'
+        });
+
+      if (insertError) throw insertError;
+
+      return true;
     } catch (error) {
       console.error('Error sending friend request:', error);
       if (error instanceof Error) {
@@ -329,6 +375,7 @@ export const FriendsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .from('friend_requests')
         .select('sender_id, receiver_id')
         .eq('id', requestId)
+        .eq('status', 'pending')
         .single();
 
       if (requestError || !request) throw requestError;

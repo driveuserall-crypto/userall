@@ -26,7 +26,11 @@ const StudyStatus: React.FC = () => {
   const handleStatusUpdate = async (status: 'studying' | 'break' | 'offline', subject?: string) => {
     await updateStudyStatus(status, subject);
     setMyStatus(status);
-    setMySubject(subject || '');
+    if (status === 'studying') {
+      setMySubject(subject || '');
+    } else {
+      setMySubject('');
+    }
     setShowStatusModal(false);
   };
 
@@ -309,6 +313,19 @@ const StudyStatus: React.FC = () => {
                   </div>
                 </button>
 
+                {/* Subject input for studying */}
+                <div className={`pt-2 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                    What are you studying? (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={mySubject}
+                    onChange={(e) => setMySubject(e.target.value)}
+                    className={`w-full px-4 py-3 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' : 'bg-gray-50 border-gray-300 text-gray-800 placeholder-gray-500'} border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200`}
+                    placeholder="e.g., Mathematics, Physics, etc."
+                  />
+                </div>
                 <button
                   onClick={() => handleStatusUpdate('break')}
                   className={`w-full p-4 ${isDarkMode ? 'bg-yellow-900 bg-opacity-20 border-yellow-700 hover:bg-opacity-30' : 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100'} border rounded-lg transition-colors duration-200 text-left`}
@@ -334,21 +351,6 @@ const StudyStatus: React.FC = () => {
                     </div>
                   </div>
                 </button>
-
-                {myStatus === 'studying' && (
-                  <div className={`pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                      What are you studying? (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={mySubject}
-                      onChange={(e) => setMySubject(e.target.value)}
-                      className={`w-full px-4 py-3 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' : 'bg-gray-50 border-gray-300 text-gray-800 placeholder-gray-500'} border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200`}
-                      placeholder="e.g., Mathematics, Physics, etc."
-                    />
-                  </div>
-                )}
               </div>
             </div>
           </div>
